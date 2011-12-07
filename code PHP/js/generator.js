@@ -25,13 +25,15 @@ function infosTable(table){
 
 function envoyerDonneesFormulaire(){
     var donneesFormulaire = $("#formulairePourFormulaire input:text, input:hidden, input:checkbox, select");
-	var url = site_url+'/generercode/genererCode';
+	var url = site_url+'/generercode/genererFormulaire';
 	var parametres = "({ 'table': '"+$("#tables option:selected").text()+"'";
 	var separateur = ',';
 	donneesFormulaire.each(
 		function(){
+				var regExpr = /\"/g;
+				parametres+=separateur+'"'+$(this).attr('name')+'":"'+$(this).val().replace(/\"/g, '\\\"')+'"';
+				console.log($(this).val(), $(this).val().replace(/\"/g, '\"'));
 			if($(this).attr('type')!='checkbox'){
-				parametres+=separateur+'"'+$(this).attr('name')+'":"'+$(this).val()+'"';
 				separateur = ',';
 			}else{
 				parametres+=separateur+'"'+$(this).attr('name')+'":"'+$(this).is(':checked')+'"';
@@ -45,4 +47,20 @@ function envoyerDonneesFormulaire(){
 			$("#codeGenere").html(data);
 		}
 	);
+}
+
+function toggleDansFormulaire(etat){
+	if(etat == true){
+		$('input:checkbox[name$="\[generer\]"]').attr('checked', true);
+	}else{
+		$('input:checkbox[name$="\[generer\]"]').attr('checked', false);
+	}
+}
+
+function toggleObligatoire(etat){
+	if(etat == true){
+		$('input:checkbox[name$="\[obligatoire\]"]').attr('checked', true);
+	}else{
+		$('input:checkbox[name$="\[obligatoire\]"]').attr('checked', false);
+	}
 }
