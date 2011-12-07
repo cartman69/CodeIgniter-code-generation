@@ -75,7 +75,7 @@ class GenererCode extends CI_Controller {
      * Appel ajax à la méthode listerTables pour afficher une combo avec la liste des tables
      */
     function choisirTable() {
-        $sBase_l = $this->input->get_post('base');
+        $sBase_l = $this->nettoyer($this->input->post('base'));
         $tTables_l = $this->listerTables($sBase_l);
         $this->load->helper('form');
         echo 'Choisissez une table : ', form_dropdown('tables', $tTables_l, null, 'id="tables" onchange="javascript : infosTable(this.value)"');
@@ -105,8 +105,8 @@ class GenererCode extends CI_Controller {
      * 
      */
     function donneesTableAjax() {
-        $sBase_l = $this->input->get_post('base');
-        $sTable_l = $this->input->get_post('table');
+        $sBase_l = $this->nettoyer($this->input->post('base'));
+        $sTable_l = $this->nettoyer($this->input->post('table'));
         $this->informationsTable($sBase_l, $sTable_l);
     }
 
@@ -145,12 +145,12 @@ class GenererCode extends CI_Controller {
         );
 
         //--- On récupère les données postées
-        $sBase_l = $this->input->get_post('choixBase', true);
-        $sTable_l = $this->input->get_post('table', true);
-        $tDonneesChamps_l = $this->input->get_post('donnees', true);
-		$sNomController_l = $this->input->get_post('controller', true);
-		$sNomVue_l = $this->input->get_post('view', true);
-		$sNomModele_l = $this->input->get_post('model', true);
+        $sBase_l = $this->nettoyer($this->input->post('choixBase', true));
+        $sTable_l = $this->nettoyer($this->input->post('table', true));
+        $tDonneesChamps_l = $this->input->post('donnees', true);
+		$sNomController_l = $this->nettoyer($this->input->post('controller', true));
+		$sNomVue_l = $this->nettoyer($this->input->post('view', true));
+		$sNomModele_l = $this->nettoyer($this->input->post('model', true));
 
 		//--- Début du contrôleur
 		$sCodeController_l  = "<?php if (!defined('BASEPATH')) exit('No direct script access allowed');\n\n";
@@ -180,8 +180,16 @@ class GenererCode extends CI_Controller {
         $sCodeFormulaire_l .= "\t\t\$this->load->helper('form');\n";
         $sCodeFormulaire_l .= "\t\t\$this->load->helper('html');\n";
         $sCodeFormulaire_l .= "\t\t\$champsFormulaires = array(\n";
-		$sCodeFormulaireVue_l  = "<?php if (!defined('BASEPATH')) exit('No direct script access allowed');\n";
-        $sCodeFormulaireVue_l .= "echo form_open();\n";
+		$sCodeFormulaireVue_l  = "<?php if (!defined('BASEPATH')) exit('No direct script access allowed'); ?>\n";
+		$sCodeFormulaireVue_l .= "<style>\n";
+		$sCodeFormulaireVue_l .= "label{\n";
+		$sCodeFormulaireVue_l .= "\twidth:200px;\n";
+		$sCodeFormulaireVue_l .= "\tfloat:left;\n";
+		$sCodeFormulaireVue_l .= "}\n";
+		$sCodeFormulaireVue_l .= "</style>\n";
+                $sCodeFormulaireVue_l .= "</head>\n";
+                $sCodeFormulaireVue_l .= "<body>\n";
+        $sCodeFormulaireVue_l .= "<?php \n echo form_open();\n";
 
         //--- Génération de la validation
         $sCodeValidation_l = "\t\t\$this->load->library('form_validation');\n";
@@ -201,109 +209,115 @@ class GenererCode extends CI_Controller {
 
 		
         //--- Code de validation jquery
-        $sCodeJquery_l = "$('form').validate(\n";
-        $sCodeJquery_l .= "\trules: {\n";
+        $sCodeJquery_l = "\n\t<script type=\"text/javascript\" src=\"".  base_url()."js/jquery-1.6.4.js\"></script>\n";
+        $sCodeJquery_l .= "\t<script type=\"text/javascript\" src=\"".  base_url()."js/jquery-validation-1.9.0/jquery.validate.js\"></script>\n";
+        $sCodeJquery_l .= "\t<script type=\"text/javascript\" >\n";
+        $sCodeJquery_l .= "\t\$(document).ready(function(){\n";
+        $sCodeJquery_l .= "\t\t\$('form').validate({\n";
+        $sCodeJquery_l .= "\t\t\trules: {\n";
 
         //--- Parcours de la liste des champs postés
         foreach ($tDonneesChamps_l as $indice => $tChamp_l) {
             //--- On a coché la case "dans le formulaire"
             if ($tChamp_l['generer'] === 'true') {
-                $sCodeFormulaireVue_l .="\necho form_error('{$tChamp_l['nom_input']}');\n";
+                $sCodeFormulaireVue_l .="\necho form_error('{$this->nettoyer($tChamp_l['nom_input'])}');\n";
 
                 //--- Génération du formulaire
                 //--- En fonction du type de champ
                 if ($tChamp_l['type_input'] != 'form_hidden') {
-                    $sCodeFormulaire_l .="\t\t\t'{$tChamp_l['nom_input']}' => array(\n";
-                    $sCodeFormulaire_l .="\t\t\t\t'name' => '{$tChamp_l['nom_input']}',\n";
-                    $sCodeFormulaire_l .="\t\t\t\t'id' => '{$tChamp_l['nom_input']}',\n";
-                    $sCodeFormulaire_l .="\t\t\t\t'value' => set_value('{$tChamp_l['nom_input']}'),\n";
+                    $sCodeFormulaire_l .="\t\t\t'{$this->nettoyer($tChamp_l['nom_input'])}' => array(\n";
+                    $sCodeFormulaire_l .="\t\t\t\t'name' => '{$this->nettoyer($tChamp_l['nom_input'])}',\n";
+                    $sCodeFormulaire_l .="\t\t\t\t'id' => '{$this->nettoyer($tChamp_l['nom_input'])}',\n";
+                    $sCodeFormulaire_l .="\t\t\t\t'value' => set_value('{$this->nettoyer($tChamp_l['nom_input'])}'),\n";
                     if ($tChamp_l['longueur_max_champ'] != '') {
-                        $sCodeFormulaire_l .="\t\t\t\t'maxlength' => {$tChamp_l['longueur_max_champ']}\n";
+                        $sCodeFormulaire_l .="\t\t\t\t'maxlength' => {$this->nettoyer($tChamp_l['longueur_max_champ'])}\n";
                     }
                     $sCodeFormulaire_l .="\t\t\t),\n";
                 }
 
                 switch ($tChamp_l['type_input']) {
                     case 'form_hidden':
-                        $sCodeFormulaireVue_l.="echo form_hidden('{$tChamp_l['nom_input']}', set_value('{$tChamp_l['nom_input']}'));\n";
+                        $sCodeFormulaireVue_l.="echo form_hidden('{$this->nettoyer($tChamp_l['nom_input'])}', set_value('{$this->nettoyer($tChamp_l['nom_input'])}'));\n";
                         break;
                     case 'form_password':
-                        $sCodeFormulaireVue_l.="echo form_label('{$tChamp_l['label_input']}', '{$tChamp_l['nom_input']}');\n";
-                        $sCodeFormulaireVue_l.="echo form_password(\$champs['{$tChamp_l['nom_input']}']);\n";
+                        $sCodeFormulaireVue_l.="echo form_label(\"{$this->nettoyer($tChamp_l['label_input'])}\", '{$this->nettoyer($tChamp_l['nom_input'])}');\n";
+                        $sCodeFormulaireVue_l.="echo form_password(\$champs['{$this->nettoyer($tChamp_l['nom_input'])}']);\n";
                         $sCodeFormulaireVue_l.="echo br();\n";
                         break;
                     case 'form_textarea':
-                        $sCodeFormulaireVue_l.="echo form_label('{$tChamp_l['label_input']}', '{$tChamp_l['nom_input']}');\n";
-                        $sCodeFormulaireVue_l.="echo form_textarea(\$champs['{$tChamp_l['nom_input']}']);\n";
+                        $sCodeFormulaireVue_l.="echo form_label(\"{$this->nettoyer($tChamp_l['label_input'])}\", '{$this->nettoyer($tChamp_l['nom_input'])}');\n";
+                        $sCodeFormulaireVue_l.="echo form_textarea(\$champs['{$this->nettoyer($tChamp_l['nom_input'])}']);\n";
                         $sCodeFormulaireVue_l.="echo br();\n";
                         break;
                     case 'form_dropdown':
-                        $sCodeFormulaireVue_l.="echo form_label('{$tChamp_l['label_input']}', '{$tChamp_l['nom_input']}');\n";
+                        $sCodeFormulaireVue_l.="echo form_label(\"{$this->nettoyer($tChamp_l['label_input'])}\", '{$this->nettoyer($tChamp_l['nom_input'])}');\n";
                         $sCodeFormulaireVue_l.="//--- Je vous laisse le soin de passer un tableau de valeurs à votre dropdown\n";
-                        $sCodeFormulaireVue_l.="echo form_dropdown('{$tChamp_l['nom_input']}', array());\n";
+                        $sCodeFormulaireVue_l.="echo form_dropdown('{$this->nettoyer($tChamp_l['nom_input'])}', array());\n";
                         $sCodeFormulaireVue_l.="echo br();\n";
                         break;
                     case 'form_multiselect':
-                        $sCodeFormulaireVue_l.="echo form_label('{$tChamp_l['label_input']}', '{$tChamp_l['nom_input']}');\n";
+                        $sCodeFormulaireVue_l.="echo form_label(\"{$this->nettoyer($tChamp_l['label_input'])}\", '{$this->nettoyer($tChamp_l['nom_input'])}');\n";
                         $sCodeFormulaireVue_l.="//--- Je vous laisse le soin de passer un tableau de valeurs à votre multiselect\n";
-                        $sCodeFormulaireVue_l.="echo form_multiselect('{$tChamp_l['nom_input']}', array());\n";
+                        $sCodeFormulaireVue_l.="echo form_multiselect('{$this->nettoyer($tChamp_l['nom_input'])}', array());\n";
                         $sCodeFormulaireVue_l.="echo br();\n";
                         break;
                     case 'form_checkbox':
-                        $sCodeFormulaireVue_l.="\necho form_label('{$tChamp_l['label_input']}', '{$tChamp_l['nom_input']}');\n";
-                        $sCodeFormulaireVue_l.="echo form_checkbox(\$champs['{$tChamp_l['nom_input']}'], \$champs['{$tChamp_l['nom_input']}'], set_checkbox(\$champs['{$tChamp_l['nom_input']}'], \$champs['{$tChamp_l['nom_input']}']));\n";
+                        $sCodeFormulaireVue_l.="\necho form_label(\"{$this->nettoyer($tChamp_l['label_input'])}\", '{$this->nettoyer($tChamp_l['nom_input'])}');\n";
+                        $sCodeFormulaireVue_l.="echo form_checkbox('{$this->nettoyer($tChamp_l['nom_input'])}', '{$this->nettoyer($tChamp_l['nom_input'])}', set_checkbox('{$this->nettoyer($tChamp_l['nom_input'])}', '{$this->nettoyer($tChamp_l['nom_input'])}'));\n";
                         $sCodeFormulaireVue_l.="echo br();\n";
                         break;
                     case 'form_radio':
-                        $sCodeFormulaireVue_l.="\necho form_label('{$tChamp_l['label_input']}', '{$tChamp_l['nom_input']}');\n";
-                        $sCodeFormulaireVue_l.="echo form_radio(\$champs['{$tChamp_l['nom_input']}'], \$champs['{$tChamp_l['nom_input']}'], set_radio(\$champs['{$tChamp_l['nom_input']}'], \$champs['{$tChamp_l['nom_input']}']));\n";
+                        $sCodeFormulaireVue_l.="\necho form_label(\"{$this->nettoyer($tChamp_l['label_input'])}\", '{$this->nettoyer($tChamp_l['nom_input'])}');\n";
+                        $sCodeFormulaireVue_l.="echo form_radio('{$this->nettoyer($tChamp_l['nom_input'])}', '{$this->nettoyer($tChamp_l['nom_input'])}', set_radio('{$this->nettoyer($tChamp_l['nom_input'])}', '{$this->nettoyer($tChamp_l['nom_input'])}'));\n";
                         $sCodeFormulaireVue_l.="echo br();\n";
                         break;
                     case 'form_input':
                     default:
-                        $sCodeFormulaireVue_l.="\necho form_label('{$tChamp_l['label_input']}', '{$tChamp_l['nom_input']}');\n";
+                        $sCodeFormulaireVue_l.="\necho form_label('{$this->nettoyer($tChamp_l['label_input'])}', '{$this->nettoyer($tChamp_l['nom_input'])}');\n";
                         $sCodeFormulaireVue_l.="echo form_input(\$champs['{$tChamp_l['nom_input']}']);\n";
                         $sCodeFormulaireVue_l.="echo br();\n";
                         break;
                 }
 
                 //--- Génération de la validation codeIgniter
-                $sCodeValidation_l.="\t\t\$this->form_validation->set_rules('{$tChamp_l['nom_input']}', '{$tChamp_l['label_input']}', 'trim";
+                $sCodeValidation_l.="\t\t\$this->form_validation->set_rules('{$this->nettoyer($tChamp_l['nom_input'])}', '{$this->nettoyer($tChamp_l['label_input'])}', 'trim";
                 if ($tChamp_l['obligatoire'] === 'true') {
                     $sCodeValidation_l.="|required";
                 }
                 if ($tChamp_l['longueur_max_champ'] != '') {
-                    $sCodeValidation_l.="|max_length[{$tChamp_l['longueur_max_champ']}]";
+                    $sCodeValidation_l.="|max_length[{$this->nettoyer($tChamp_l['longueur_max_champ'])}]";
                 }
                 $sCodeValidation_l.="|xss_clean');\n";
                 //--- Génération du tableau des données
-                $sCodeEnregistrement_l.="\t\t'{$tChamp_l['nom_champ']}' => set_value('{$tChamp_l['nom_input']}'), \n";
-				$sCodeFonctionEnregistrement_l .= "\t\t\t'{$tChamp_l['nom_champ']}' => set_value('{$tChamp_l['nom_input']}'), \n";
+                $sCodeEnregistrement_l.="\t\t'{$this->nettoyer($tChamp_l['nom_champ'])}' => set_value('{$this->nettoyer($tChamp_l['nom_input'])}'), \n";
+				$sCodeFonctionEnregistrement_l .= "\t\t\t'{$this->nettoyer($tChamp_l['nom_champ'])}' => set_value('{$this->nettoyer($tChamp_l['nom_input'])}'), \n";
 
 
                 //--- Validation jQuery
-                $sCodeJquery_l.="\t\t".$tChamp_l['nom_input'] . ": {";
+                $sCodeJquery_l.="\t\t\t\t".$this->nettoyer($tChamp_l['nom_input']) . ": {";
 
-                $sSeparateur_l = '';
+                $sSeparateur_l = "\n";
                 switch ($tChamp_l['type_donnee']) {
                     case 'int' :
                     case 'tinyint':
-                        $sCodeJquery_l.="number: true";
-                        $sSeparateur_l = ', ';
+                    case 'bigint':
+                        $sCodeJquery_l.= $sSeparateur_l."\t\t\t\t\tnumber: true";
+                        $sSeparateur_l = ", \n";
                         break;
                     case 'datetime':
-                        $sCodeJquery_l.="date: true";
-                        $sSeparateur_l = ', ';
+                        $sCodeJquery_l.= $sSeparateur_l."\t\t\t\t\tdate: true";
+                        $sSeparateur_l = ", \n";
                         break;
 
                     default:
                         break;
                 }
                 if ($tChamp_l['obligatoire'] === 'true') {
-                    $sCodeJquery_l.=$sSeparateur_l . "required: true";
+                    $sCodeJquery_l.=$sSeparateur_l . "\t\t\t\t\trequired: true";
+					$sSeparateur_l = ", \n";
                 }
                 if ($tChamp_l['longueur_max_champ'] != '') {
-                    $sCodeJquery_l.=$sSeparateur_l . "maxlength: {$tChamp_l['longueur_max_champ']
+                    $sCodeJquery_l.=$sSeparateur_l . "\t\t\t\t\tmaxlength: {$this->nettoyer($tChamp_l['longueur_max_champ'])
                             }";
                 }
 
@@ -314,37 +328,37 @@ class GenererCode extends CI_Controller {
 		
 		//---- fin de la fonction d'affichage du formulaire
 		$sCodeFormulaire_l .= "\t\t);\n"; 
-		$sCodeFormulaire_l .= "\t\t\$this->load->view('{$sNomVue_l}', array('champs' => \$champsFormulaires));\n"; 
+		$sCodeFormulaire_l .= "\t\t\$this->load->view('{$this->nettoyer($sNomVue_l)}', array('champs' => \$champsFormulaires));\n"; 
 		$sCodeFormulaire_l .= "\t}\n\n"; 
 		
-        $sCodeFormulaireVue_l .= "\necho form_submit('Enregistrer');
-        \n";
-        $sCodeFormulaireVue_l .= "\necho form_close();
-        \n";
+        $sCodeFormulaireVue_l .= "\necho form_submit('Enregistrer');\n";
+        $sCodeFormulaireVue_l .= "\necho form_close();\n";
+        $sCodeFormulaireVue_l .= "?>\n";
+        $sCodeFormulaireVue_l .= "</body>\n";
 
         //--- Fin du tableau contenant les données à enregistrer
         $sCodeEnregistrement_l.="\t);\n";
 		$sCodeFonctionEnregistrement_l .= "\t\t);\n";
-		$sCodeFonctionEnregistrement_l .= "\t\t\$this->load->model('{$sNomModele_l}');\n";
-		$sCodeFonctionEnregistrement_l .= "\t\t\$this->{$sNomModele_l}->enregistrer(\$tDonneesFormulaire_l);\n";
+		$sCodeFonctionEnregistrement_l .= "\t\t\$this->load->model('{$this->nettoyer($sNomModele_l)}');\n";
+		$sCodeFonctionEnregistrement_l .= "\t\t\$this->{$this->nettoyer($sNomModele_l)}->enregistrer(\$tDonneesFormulaire_l);\n";
 		$sCodeFonctionEnregistrement_l .= "\t}\n\n";
 
         //--- Active record : on vérifie la clé primaire pour choisir insert / update
-        $sChampClePrimaire = $this->input->get_post('clePrimaire');
-        $sCodeEnregistrement_l.="\tif(\$tDonnees_l['{$sChampClePrimaire}'] === '' ) {\n";
-        $sCodeEnregistrement_l.="\t\t\$this->db->insert('{$sTable_l}', \$tDonnees_l);\n";
+        $sChampClePrimaire = $this->nettoyer($this->input->post('clePrimaire'));
+        $sCodeEnregistrement_l.="\tif(\$tDonnees_l['{$this->nettoyer($sChampClePrimaire)}'] === '' ) {\n";
+        $sCodeEnregistrement_l.="\t\t\$this->db->insert('{$this->nettoyer($sTable_l)}', \$tDonnees_l);\n";
         $sCodeEnregistrement_l.="\t} else {\n";
-        $sCodeEnregistrement_l.="\t\t\$this->db->where('{$sChampClePrimaire}', \$tDonnees_l['{$sChampClePrimaire}']);\n";
-        $sCodeEnregistrement_l.="\t\t\$this->db->update('{$sTable_l}', \$tDonnees_l);\n";
+        $sCodeEnregistrement_l.="\t\t\$this->db->where('{$this->nettoyer($sChampClePrimaire)}', \$tDonnees_l['{$this->nettoyer($sChampClePrimaire)}']);\n";
+        $sCodeEnregistrement_l.="\t\t\$this->db->update('{$this->nettoyer($sTable_l)}', \$tDonnees_l);\n";
         $sCodeEnregistrement_l.="\t}\n";
 		$sCodeEnregistrement_l.="}\n";
 
 		//--- Code du modele
 		$sCodeModele_l  = "<?php if (!defined('BASEPATH')) exit('No direct script access allowed');\n\n";
-		$sCodeModele_l.="class {$sNomModele_l} extends CI_Model{\n";
-		$sCodeModele_l.="\tprotected \$base='{$sBase_l}';\n";
-		$sCodeModele_l.="\tprotected \$table='{$sTable_l}';\n";
-		$sCodeModele_l.="\tprotected \$clePrimaire='{$sChampClePrimaire}';\n";
+		$sCodeModele_l.="class {$this->nettoyer($sNomModele_l)} extends CI_Model{\n";
+		$sCodeModele_l.="\tprotected \$base='{$this->nettoyer($sBase_l)}';\n";
+		$sCodeModele_l.="\tprotected \$table='{$this->nettoyer($sTable_l)}';\n";
+		$sCodeModele_l.="\tprotected \$clePrimaire='{$this->nettoyer($sChampClePrimaire)}';\n";
 		$sCodeModele_l.="\tfunction __construct(){\n";
 		$sCodeModele_l.="\t\tparent::__construct();\n";
 		$sCodeModele_l.="\t\t\$this->load->database();\n";
@@ -352,17 +366,22 @@ class GenererCode extends CI_Controller {
         $sCodeModele_l.="\t\t\$this->db->db_select();\n";
 		$sCodeModele_l.="\t}\n\n";
 		$sCodeModele_l.="\tfunction enregistrer(\$tDonnees_p){\n";
-		$sCodeModele_l.="\t\tif(\$tDonnees_p['{$sChampClePrimaire}'] === '' ) {\n";
+		$sCodeModele_l.="\t\tif(\$tDonnees_p['{$this->nettoyer($sChampClePrimaire)}'] === '' ) {\n";
 		$sCodeModele_l.="\t\t\treturn \$this->db->insert(\$this->base.'.'.\$this->table, \$tDonnees_p);\n";
 		$sCodeModele_l.="\t\t}else{\n";
-        $sCodeModele_l.="\t\t\t\$this->db->where('{$sChampClePrimaire}', \$tDonnees_p['{$sChampClePrimaire}']);\n";
-        $sCodeModele_l.="\t\t\treturn \$this->db->update('{$sTable_l}', \$tDonnees_p);\n";
+        $sCodeModele_l.="\t\t\t\$this->db->where('{$this->nettoyer($sChampClePrimaire)}', \$tDonnees_p['{$this->nettoyer($sChampClePrimaire)}']);\n";
+        $sCodeModele_l.="\t\t\treturn \$this->db->update('{$this->nettoyer($sTable_l)}', \$tDonnees_p);\n";
 		$sCodeModele_l.="\t\t}\n";
 		$sCodeModele_l.="\t}\n";
 		$sCodeModele_l.="}\n";
 		
+        //--- Fin validation jquery
+                
+                //--- Suppression de la dernière virgule
       $sCodeJquery_l=substr($sCodeJquery_l, 0, -3);
-        $sCodeJquery_l.="\n\t}\n)";
+        $sCodeJquery_l.="\n\t\t\t}\n\t\t}\n";
+        $sCodeJquery_l.="\t\t)\n\t});\n";
+        $sCodeJquery_l.="</script>";
         /*
           echo $sCodeValidation_l;
           echo "//------------------------------------------------------------------------------\n";
@@ -387,7 +406,7 @@ class GenererCode extends CI_Controller {
 		 $sCodeController_l.="}";
 		 
         $this->load->view('codeGenere', array('sCodeFormulaire' => $sCodeFormulaire_l,
-			'sCodeVue' => $sCodeFormulaireVue_l,
+			'sCodeVue' => "<head>".$sCodeJquery_l.$sCodeFormulaireVue_l,
 			'sCodeModele' => $sCodeModele_l,
             'sCodeValidation' => $sCodeValidation_l,
             'sCodeEnregistrement' => $sCodeEnregistrement_l,
@@ -395,4 +414,11 @@ class GenererCode extends CI_Controller {
 			'sCodeController' => $sCodeController_l));
     }
 
+	function nettoyer($sValeurPostee_p){
+		try{
+		return htmlentities(trim($this->security->xss_clean($sValeurPostee_p)));
+		}catch(exception $e){
+			var_dump($sValeurPostee_p);
+		}
+	}
 }
