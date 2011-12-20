@@ -1,0 +1,22 @@
+.ligneImpaire{
+    
+    background-color: #cc9900;
+}
+
+.lignePaire{
+    
+    background-color: #ff6633;
+}
+
+.tableFormulaireChamps{
+    
+    border-right-style: solid;
+    border-left-style: solid;
+    border-bottom-style: solid;
+    border-top-style: solid;
+    border-right-color: black;
+    border-left-color: black;
+    border-bottom-color: black;
+    border-top-color: black;
+    border-collapse: collapse;
+}

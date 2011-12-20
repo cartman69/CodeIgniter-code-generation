@@ -1,5 +1,5 @@
 <form name='formulairePourFormulaire' id="formulairePourFormulaire" method="post" target="blanc" action="<?php echo site_url('/generercode/generercode') ?>" >
-    <table border="1">
+    <table border="1" class="tableFormulaireChamps">
         <thead>
             <tr>
                 <th>Champ</th>
@@ -15,7 +15,7 @@
         </thead>
         <tbody>
             <?php $ci = get_instance(); foreach ($listeChamps as $indice => $champ): ?>
-                <tr>
+                <tr class="<?php echo $indice%2?'ligneImpaire':'lignePaire'?>">
                     <td><?php echo $champ->name; ?><input type="hidden" value="<?php echo $champ->name; ?>"  name="donnees[<?php echo $indice; ?>][nom_champ]" />
 						<?php if($champ->primary_key==1){ echo ' (clé primaire)'; $sClePrimaire_l = $champ->name;} ?>
 					</td>

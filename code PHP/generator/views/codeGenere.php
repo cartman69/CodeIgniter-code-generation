@@ -1,9 +1,9 @@
-<label for="codeControleur">Contrôleur : </label>
+<label for="codeControleur" style="float:left;width:100px;">Contrôleur : </label>
 <textarea name="codeControleur" id="codeControleur" cols="100" rows="20"><?php echo $sCodeController; ?></textarea><br />
-<label for="codeVue">Vue : </label>
-<textarea name="codeVue" id="codeVue" cols="100" rows="20"><?php echo $sCodeVue; ?></textarea><br />
-<label for="codeModele">Modele : </label>
+<label for="codeModele" style="float:left;width:100px;">Modele : </label>
 <textarea name="codeModele" id="codeModele" cols="100" rows="20"><?php echo $sCodeModele; ?></textarea><br />
+<label for="codeVue" style="float:left;width:100px;">Vue : </label>
+<textarea name="codeVue" id="codeVue" cols="100" rows="20"><?php echo $sCodeVue; ?></textarea><br />
 <label for="codeFormulaire">Génération du formulaire : </label>
 <textarea name="codeFormulaire" id="codeFormulaire" cols="100" rows="20"><?php echo $sCodeFormulaire; ?></textarea><br />
 <label for="codeValidation">Génération de la validation : </label>
