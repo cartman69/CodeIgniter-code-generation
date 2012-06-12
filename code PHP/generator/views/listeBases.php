@@ -7,7 +7,7 @@
 <script type="text/javascript" src="<?php echo base_url()?>js/jquery-1.6.4.js"></script>
 </head>
 <body>
-Choisissez une base : 
+<?php echo $this->lang->line('form_select_database'); ?>
 <select name='choixBase' id='choixBase' onchange="javascript : choixTable(this.value)">
 	<?php foreach($bases as $base) : ?>
 		<option value="<?php echo $base; ?>"><?php echo $base; ?></option>

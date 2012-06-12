@@ -10,6 +10,7 @@ Liste des champs de la table :
 				<th>Libellé du formulaire</th>
                 <th>Nom de l'input</th>
                 <th>Type de l'input</th>
+				<th>Longueur min de l'input</th>
                 <th>Longueur max de l'input</th>
                 <th><input type="checkbox" onclick="javascript:toggleObligatoire($(this).is(':checked'))">Obligatoire</th>
             </tr>
@@ -28,8 +29,9 @@ Liste des champs de la table :
 					<td><input type="text" name="donnees[<?php echo $indice; ?>][label_input]" value="<?php echo $champ->name; ?>" /></td>
                     <td><input type="text" value="input_<?php echo $champ->name; ?>" name="donnees[<?php echo $indice; ?>][nom_input]" /></td>
                     <td><?php echo $ci->listeTypesChamps("donnees[".$indice."][type_input]"); ?></td>
+					<td><input type="text" value="0" name="donnees[<?php echo $indice; ?>][longueur_min_champ]" /></td>
 					<td><input type="text" value="<?php echo $champ->max_length; ?>" name="donnees[<?php echo $indice; ?>][longueur_max_champ]" /></td>
-                                        <td><input type="checkbox" name="donnees[<?php echo $indice; ?>][obligatoire]" /></td>
+					<td><input type="checkbox" name="donnees[<?php echo $indice; ?>][obligatoire]" /></td>
                 </tr>
             <?php endforeach; ?>
         </tbody>

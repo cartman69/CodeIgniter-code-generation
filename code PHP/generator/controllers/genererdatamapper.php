@@ -3,8 +3,11 @@
 if (!defined('BASEPATH'))
     exit('No direct script access allowed');
 
-class GenererCode extends CI_Controller {
+class GenererDatamapper extends CI_Controller {
 
+	private $_cle;
+	private $_CIprefixe;
+	
     function __construct() {
         parent::__construct();
         $this->load->helper('url');
@@ -24,9 +27,11 @@ class GenererCode extends CI_Controller {
                 $langue = 'english';
         }
 
-
         //--- Chargement du fichier de langue
         $this->lang->load('labels', $langue);
+		
+		//--- Préfixe pour les noms de classe
+		$this->_CIprefixe = $this->config->item('subclass_prefix');
     }
 
     /**
@@ -111,9 +116,27 @@ class GenererCode extends CI_Controller {
         $this->db->database = $sBase_p;
         $this->db->db_select();
         $tDonneesChamps = $this->db->field_data($sTable_p);
-        //var_dump($tDonneesChamps);
 
-        $this->load->view('formulaireChamps', array('listeChamps' => $tDonneesChamps));
+        //--- Recherche de la clé (soit clé primaire soit colonne nommée 'id'
+        foreach($tDonneesChamps as $indice => $tmetaData){
+            //--- Clé primaire égale à 'id'
+            if(strtolower($tmetaData->name) == 'id' && $tmetaData->primary_key == true){
+                echo "Clé primaire nommée 'id' => OK <br />";
+				$this->_cle = $tmetaData->name;
+            }elseif(strtolower($tmetaData->name) != 'id' && $tmetaData->primary_key == true){
+                echo "Votre table a une clé primaire qui ne se nomme pas 'id' mais {$tmetaData->name}<br />";
+				$this->_cle = $tmetaData->name;
+            }elseif(strtolower($tmetaData->name) == 'id' && $tmetaData->primary_key != true){
+                echo "Votre colonne 'id' n'est pas une clé primaire<br />";
+            }
+            if(strtolower(substr($tmetaData->name, -3)) === '_id'){
+                echo "Relation possible détectée : {$tmetaData->name} <br />";
+            }
+        }
+        echo "<pre>";
+        var_dump($tDonneesChamps);
+        echo "</pre>";
+        $this->load->view('formulaireChampsDatamapper', array('listeChamps' => $tDonneesChamps));
     }
 
     /**
@@ -168,29 +191,58 @@ class GenererCode extends CI_Controller {
         $sNomController_l = $this->nettoyer($this->validerNoms($this->input->post('controller', true)));
         $sNomVue_l = $this->nettoyer($this->validerNoms($this->input->post('view', true)));
         $sNomModele_l = $this->nettoyer($this->validerNoms($this->input->post('model', true)));
+        $sChampClePrimaire = $this->nettoyer($this->input->post('clePrimaire'));
 
         //--- Début du contrôleur
         $sCodeController_l = "<?php if (!defined('BASEPATH')) exit('No direct script access allowed');\n\n";
-        $sCodeController_l .= "class {$sNomController_l} extends CI_Controller{\n\n";
+		$sCodeControllerDatamapper_l = "<?php if (!defined('BASEPATH')) exit('No direct script access allowed');\n\n";
+        $sCodeController_l .= "class {$sNomController_l} extends {$this->_CIprefixe }Controller{\n\n";
+		$sCodeControllerDatamapper_l .= "class {$sNomController_l} extends {$this->_CIprefixe}Controller{\n\n";
         $sCodeController_l .= "\tfunction __construct(){\n";
+		$sCodeControllerDatamapper_l .= "\tfunction __construct(){\n";
         $sCodeController_l .= "\t\tparent::__construct();\n";
+		$sCodeControllerDatamapper_l .= "\t\tparent::__construct();\n";
         $sCodeController_l .= "\t}\n\n";
+		$sCodeControllerDatamapper_l .= "\t}\n\n";
         $sCodeController_l .= "\tfunction index(){\n";
+		$sCodeControllerDatamapper_l .= "\tfunction index(){\n";
         $sCodeController_l .= "\t\t\$this->afficherFormulaire();\n";
+		$sCodeControllerDatamapper_l .= "\t\t\$this->afficherFormulaire();\n";
         $sCodeController_l .= "\t}\n\n";
+		$sCodeControllerDatamapper_l .= "\t}\n\n";
         $sCodeController_l .= "\tfunction afficherFormulaire(){\n";
+		$sCodeControllerDatamapper_l .= "\tfunction afficherFormulaire(){\n";
         $sCodeController_l .= "\t\t//--- Initialisation de la validation\n";
+		$sCodeControllerDatamapper_l .= "\t\t//--- Initialisation de la validation\n";
         //$sCodeController_l .= "\t\t\$this->affichervueFormulaire();\n";
         $sCodeController_l .= "\t\t\$this->load->library('form_validation');\n";
+		$sCodeControllerDatamapper_l .= "\t\t\$this->load->library('form_validation');\n";
         $sCodeController_l .= "\t\t\$this->initValidation();\n";
+		$sCodeControllerDatamapper_l .= "\t\t\$this->initValidation();\n";
         $sCodeController_l .= "\t\tif (\$this->form_validation->run() === false){\n";
+		$sCodeControllerDatamapper_l .= "\t\tif (\$this->form_validation->run() === false){\n";
         $sCodeController_l .= "\t\t\t//--- Action en cas d'erreur de validation\n";
+		$sCodeControllerDatamapper_l .= "\t\t\t//--- Action en cas d'erreur de validation\n";
         $sCodeController_l .= "\n\t\t\t//--- Affichage du formulaire\n";
+		$sCodeControllerDatamapper_l .= "\n\t\t\t//--- Affichage du formulaire\n";
         $sCodeController_l .= "\t\t\t\$this->afficherVueFormulaire();\n";
+		$sCodeControllerDatamapper_l .= "\t\t\t\$this->afficherVueFormulaire();\n";
         $sCodeController_l .= "\t\t}else{\n";
-        $sCodeController_l .= "\t\t\t\$this->enregistrerDonnees();\n";
+		$sCodeControllerDatamapper_l .= "\t\t}else{\n";
+        $sCodeController_l .= "\t\t\t\$retourEnregistrement = \$this->enregistrerDonnees();\n";
+		$sCodeControllerDatamapper_l .= "\t\t\t\$retourEnregistrement = \$this->enregistrerDonnees();\n";
+        $sCodeController_l .= "\t\t\tif(\$retourEnregistrement){\n";
+		$sCodeControllerDatamapper_l .= "\t\t\tif(\$retourEnregistrement){\n";
+        $sCodeController_l .= "\t\t\t\t //--- Enregistrement ok => on redirige\n";
+		$sCodeControllerDatamapper_l .= "\t\t\t\t //--- Enregistrement ok => on redirige\n";
+		$sCodeController_l .= "\t\t\t\tredirect(\$this->uri->ruri_string().'/'.\$retourEnregistrement);\n";
+		$sCodeControllerDatamapper_l .= "\t\t\t\tredirect(\$this->uri->ruri_string().'/'.\$retourEnregistrement);\n";
+        $sCodeController_l .= "\t\t\t}\n";
+		$sCodeControllerDatamapper_l .= "\t\t\t}\n";
         $sCodeController_l .= "\t\t}\n";
+		$sCodeControllerDatamapper_l .= "\t\t}\n";
         $sCodeController_l .= "\t}\n\n";
+		$sCodeControllerDatamapper_l .= "\t}\n\n";
 
         //--- Génération du formulaire
         $sCodeFormulaire_l = "\n\tfunction afficherVueFormulaire(){\n";
@@ -199,6 +251,8 @@ class GenererCode extends CI_Controller {
         //--- On va chercher les données dans la  base
         $sCodeFormulaire_l .= "\t\t\t\$this->load->model('{$sNomModele_l}');\n";
         $sCodeFormulaire_l .= "\t\t\t\$tDonnees_l = \$this->{$sNomModele_l}->getById(\$this->uri->segment(3));\n";
+        $sCodeFormulaire_l .= "\t\t\t//-------- Si modèle datamapper ------------\n";
+        $sCodeFormulaire_l .= "\t\t\t\${$sNomModele_l} = new {$sNomModele_l}(\$this->uri->segment(3));\n";
         $sCodeFormulaire_l .= "\t\tvar_dump(\$tDonnees_l);\n";
         $sCodeFormulaire_l .= "\t\t\t//--- On a trouvé des données en base?\n";
         $sCodeFormulaire_l .= "\t\t\tif(isset(\$tDonnees_l[0])){\n";
@@ -208,10 +262,20 @@ class GenererCode extends CI_Controller {
         $sCodeFormulaire_l .= "\t\t\$this->load->helper('form');\n";
         $sCodeFormulaire_l .= "\t\t\$this->load->helper('html');\n";
         $sCodeFormulaire_l .= "\t\t\$champsFormulaires = array(\n";
+
+        //--- Génération du formulaire - version datamapper
+        $sCodeFormulaireDatamapper_l  = "\n\tfunction afficherVueFormulaire(){\n";
+        $sCodeFormulaireDatamapper_l .= "\t\t\$modele = new {$sNomModele_l}(\$this->uri->segment(3));\n";
+        $sCodeFormulaireDatamapper_l .= "\t\t\$this->load->helper('form');\n";
+        $sCodeFormulaireDatamapper_l .= "\t\t\$this->load->helper('html');\n";
+        $sCodeFormulaireDatamapper_l .= "\t\t\$champsFormulaires = array(\n";
+
         $sCodeFormulaireVue_l = "<?php \n echo form_open();\n";
 
         //--- Génération de la validation
         $sCodeValidation_l = "\t\t\$this->load->library('form_validation');\n";
+		//--- datamapper
+        $sCodeValidationDatamapper_l = "\tvar \$validation = array(\n";
 
         //--- Génération du tableau des données pour l'écriture en base
         $sCodeEnregistrement_l = "if (\$this->form_validation->run() === false)\n";
@@ -225,6 +289,7 @@ class GenererCode extends CI_Controller {
         $sCodeEnregistrement_l .= "\t\$tDonnees_l = array(\n";
         $sCodeFonctionEnregistrement_l = "\tfunction enregistrerDonnees(){\n";
         $sCodeFonctionEnregistrement_l .= "\t\t\$tDonneesFormulaire_l = array(\n";
+        $sCodeFonctionEnregistrementDatamapper_l = "\tfunction enregistrerDonnees(){\n";
 
 
         //--- Code de validation jquery
@@ -237,9 +302,39 @@ class GenererCode extends CI_Controller {
 
         //--- Parcours de la liste des champs postés
         foreach ($tDonneesChamps_l as $indice => $tChamp_l) {
+            //--- C'est la clé primaire?
+            if($tChamp_l['nom_champ'] == $sChampClePrimaire){
+                //--- On initialise l'objet datamapper avec sa valeur
+                $sCodeFonctionEnregistrementDatamapper_l .= "\t\t\${$sNomModele_l} = new {$sNomModele_l}(\$_POST['{$tChamp_l['nom_input']}']);\n";
+            }
+            
+                //--- Génération de la validation datamapper (dans le modèle)
+                $sCodeValidationDatamapper_l.="\t\t'{$this->nettoyer($tChamp_l['nom_champ'])}' => array(\n";
+                $sCodeValidationDatamapper_l.="\t\t\t'label' => '{$this->nettoyer($tChamp_l['label_input'])}',\n";
+                $sCodeValidationDatamapper_l.="\t\t\t'rules' => array('trim'";
+                if ($tChamp_l['obligatoire'] === 'true') {
+                    $sCodeValidationDatamapper_l.=", 'required'";
+                }
+                if ($tChamp_l['longueur_max_champ'] != '') {
+                    $sCodeValidationDatamapper_l.=", 'max_length' => {$this->nettoyer($tChamp_l['longueur_max_champ'])}";
+                }
+                $sCodeValidationDatamapper_l.=", 'xss_clean')//--- Fin règles {$this->nettoyer($tChamp_l['nom_input'])}\n\t\t\t\t),//--- Fin {$this->nettoyer($tChamp_l['nom_input'])}\n";
+
+            
             //--- On a coché la case "dans le formulaire"
             if ($tChamp_l['generer'] === 'true') {
                 $sCodeFormulaireVue_l .="\necho form_error('{$this->nettoyer($tChamp_l['nom_input'])}');\n";
+                
+                //--- Génération de la validation du formulaire avec la librairie de codeIgniter
+                $sCodeValidation_l.="\t\t\$this->form_validation->set_rules('{$this->nettoyer($tChamp_l['nom_input'])}', '{$this->nettoyer($tChamp_l['label_input'])}', 'trim";
+                if ($tChamp_l['obligatoire'] === 'true') {
+                    $sCodeValidation_l.="|required";
+                }
+                if ($tChamp_l['longueur_max_champ'] != '') {
+                    $sCodeValidation_l.="|max_length[{$this->nettoyer($tChamp_l['longueur_max_champ'])}]";
+                }
+                $sCodeValidation_l.="|xss_clean');\n";
+
 
                 //--- Génération du formulaire
                 //--- En fonction du type de champ
@@ -248,6 +343,12 @@ class GenererCode extends CI_Controller {
                     $sCodeFormulaire_l .="\t\t\t\t'name' => '{$this->nettoyer($tChamp_l['nom_input'])}',\n";
                     $sCodeFormulaire_l .="\t\t\t\t'id' => '{$this->nettoyer($tChamp_l['nom_input'])}',\n";
                     $sCodeFormulaire_l .="\t\t\t\t'value' => isset(\$tDonneesBase_l['{$tChamp_l['nom_champ']}'])?\$tDonneesBase_l['{$tChamp_l['nom_champ']}']:set_value('{$this->nettoyer($tChamp_l['nom_input'])}'),\n";
+
+                    $sCodeFormulaireDatamapper_l .="\t\t\t'{$this->nettoyer($tChamp_l['nom_input'])}' => array(\n";
+                    $sCodeFormulaireDatamapper_l .="\t\t\t\t'name' => '{$this->nettoyer($tChamp_l['nom_input'])}',\n";
+                    $sCodeFormulaireDatamapper_l .="\t\t\t\t'id' => '{$this->nettoyer($tChamp_l['nom_input'])}',\n";
+                    $sCodeFormulaireDatamapper_l .="\t\t\t\t'value' => isset(\$modele->{$tChamp_l['nom_champ']})?\$modele->{$tChamp_l['nom_champ']}:set_value('{$this->nettoyer($tChamp_l['nom_input'])}')),\n";
+
                     if ($tChamp_l['longueur_max_champ'] != '') {
                         $sCodeFormulaire_l .="\t\t\t\t'maxlength' => {$this->nettoyer($tChamp_l['longueur_max_champ'])}\n";
                     }
@@ -256,7 +357,8 @@ class GenererCode extends CI_Controller {
 
                 switch ($tChamp_l['type_input']) {
                     case 'form_hidden':
-                        $sCodeFormulaireVue_l.="echo form_hidden('{$this->nettoyer($tChamp_l['nom_input'])}', isset(\$tDonneesBase_l['{$tChamp_l['nom_champ']}'])?\$tDonneesBase_l['{$tChamp_l['nom_champ']}']:set_value('{$this->nettoyer($tChamp_l['nom_input'])}'));\n";
+                        $sCodeFormulaireVue_l.="echo form_hidden('{$this->nettoyer($tChamp_l['nom_input'])}', isset(\$champs['{$tChamp_l['nom_input']}']['value'])?\$champs['{$tChamp_l['nom_input']}']['value']:set_value('{$this->nettoyer($tChamp_l['nom_input'])}'));\n";
+						//\$champs['{$this->nettoyer($tChamp_l['nom_input'])}']
                         break;
                     case 'form_password':
                         $sCodeFormulaireVue_l.="echo form_label(\"{$this->nettoyer($tChamp_l['label_input'])}\", '{$this->nettoyer($tChamp_l['nom_input'])}');\n";
@@ -298,18 +400,10 @@ class GenererCode extends CI_Controller {
                         break;
                 }
 
-                //--- Génération de la validation codeIgniter
-                $sCodeValidation_l.="\t\t\$this->form_validation->set_rules('{$this->nettoyer($tChamp_l['nom_input'])}', '{$this->nettoyer($tChamp_l['label_input'])}', 'trim";
-                if ($tChamp_l['obligatoire'] === 'true') {
-                    $sCodeValidation_l.="|required";
-                }
-                if ($tChamp_l['longueur_max_champ'] != '') {
-                    $sCodeValidation_l.="|max_length[{$this->nettoyer($tChamp_l['longueur_max_champ'])}]";
-                }
-                $sCodeValidation_l.="|xss_clean');\n";
                 //--- Génération du tableau des données
                 $sCodeEnregistrement_l.="\t\t'{$this->nettoyer($tChamp_l['nom_champ'])}' => set_value('{$this->nettoyer($tChamp_l['nom_input'])}'), \n";
                 $sCodeFonctionEnregistrement_l .= "\t\t\t'{$this->nettoyer($tChamp_l['nom_champ'])}' => set_value('{$this->nettoyer($tChamp_l['nom_input'])}'), \n";
+                $sCodeFonctionEnregistrementDatamapper_l .= "\t\t\${$sNomModele_l}->{$this->nettoyer($tChamp_l['nom_champ'])} = set_value('{$this->nettoyer($tChamp_l['nom_input'])}'); \n";
 
 
                 //--- Validation jQuery
@@ -343,6 +437,14 @@ class GenererCode extends CI_Controller {
 
                 $sCodeJquery_l.="}, \n";
             }
+
+            //--- Clé externe datamapper?
+            $postfixe = substr($tChamp_l['nom_champ'], -3);
+            //echo $postfixe;
+            if(strtolower($postfixe)=='_id'){
+                //--- On l'ajoute à la liste des "has_one"
+                $has_one[] = substr($tChamp_l['nom_champ'], 0, -3);
+            }
         }
 
         //---- fin de la fonction d'affichage du formulaire
@@ -350,20 +452,31 @@ class GenererCode extends CI_Controller {
         $sCodeFormulaire_l .= "\t\t\$this->load->view('{$this->nettoyer($sNomVue_l)}', array('champs' => \$champsFormulaires));\n";
         $sCodeFormulaire_l .= "\t}\n\n";
 
+        $sCodeFormulaireDatamapper_l .= "\t\t);\n";
+        $sCodeFormulaireDatamapper_l .= "\t\t\$this->load->view('{$this->nettoyer($sNomVue_l)}', array('champs' => \$champsFormulaires));\n";
+        $sCodeFormulaireDatamapper_l .= "\t}\n\n";
+
+		
         $sCodeFormulaireVue_l .= "\necho form_submit('Enregistrer');\n";
         $sCodeFormulaireVue_l .= "\necho form_close();\n";
         $sCodeFormulaireVue_l .= "?>\n";
         $sCodeFormulaireVue_l .= "</body>\n";
+		$sCodeFormulaireVue_l .= "</html>";
 
         //--- Fin du tableau contenant les données à enregistrer
         $sCodeEnregistrement_l.="\t);\n";
         $sCodeFonctionEnregistrement_l .= "\t\t);\n";
         $sCodeFonctionEnregistrement_l .= "\t\t\$this->load->model('{$this->nettoyer($sNomModele_l)}');\n";
-        $sCodeFonctionEnregistrement_l .= "\t\t\$this->{$this->nettoyer($sNomModele_l)}->enregistrer(\$tDonneesFormulaire_l);\n";
+        $sCodeFonctionEnregistrement_l .= "\t\t\$id = \$this->{$this->nettoyer($sNomModele_l)}->enregistrer(\$tDonneesFormulaire_l);\n";
+		$sCodeFonctionEnregistrement_l .= "\t\treturn \$id;";
         $sCodeFonctionEnregistrement_l .= "\t}\n\n";
+        $sCodeFonctionEnregistrementDatamapper_l .= "\t\tif(\${$sNomModele_l}->save()){\n";
+		$sCodeFonctionEnregistrementDatamapper_l .= "\t\t\treturn \${$sNomModele_l}->id;\n";
+        //$sCodeFonctionEnregistrementDatamapper_l .= "\t\t\tredirect();//-------- Enregistrement ok => redirection\n";
+        $sCodeFonctionEnregistrementDatamapper_l .= "\t\t}\n";
+        $sCodeFonctionEnregistrementDatamapper_l .= "\t}\n\n";
 
         //--- Active record : on vérifie la clé primaire pour choisir insert / update
-        $sChampClePrimaire = $this->nettoyer($this->input->post('clePrimaire'));
         $sCodeEnregistrement_l.="\tif(\$tDonnees_l['{$this->nettoyer($sChampClePrimaire)}'] === '' ) {\n";
         $sCodeEnregistrement_l.="\t\t\$this->db->insert('{$this->nettoyer($sTable_l)}', \$tDonnees_l);\n";
         $sCodeEnregistrement_l.="\t} else {\n";
@@ -374,7 +487,7 @@ class GenererCode extends CI_Controller {
 
         //--- Code du modele
         $sCodeModele_l = "<?php if (!defined('BASEPATH')) exit('No direct script access allowed');\n\n";
-        $sCodeModele_l.="class {$this->nettoyer($sNomModele_l)} extends CI_Model{\n";
+        $sCodeModele_l.="class {$this->nettoyer($sNomModele_l)} extends {$this->_CIprefixe}Model{\n";
         $sCodeModele_l.="\tprotected \$base='{$this->nettoyer($sBase_l)}';\n";
         $sCodeModele_l.="\tprotected \$table='{$this->nettoyer($sTable_l)}';\n";
         $sCodeModele_l.="\tprotected \$clePrimaire='{$this->nettoyer($sChampClePrimaire)}';\n";
@@ -406,6 +519,36 @@ class GenererCode extends CI_Controller {
         $sCodeModele_l.="\t\t\treturn \$this->db->get_where('{$sTable_l}', array('{$sChampClePrimaire}' => \$nId_p))->result_array();\n";
         $sCodeModele_l.="\t}\n";
         $sCodeModele_l.="}\n";
+		
+		//--- Code datamapper (pas besoin de get / set)
+        $sCodeModeleDatamapper_l = "<?php if (!defined('BASEPATH')) exit('No direct script access allowed');\n\n";
+        $sCodeModeleDatamapper_l.="class {$this->nettoyer($sNomModele_l)} extends DataMapper{\n";
+        $sCodeModeleDatamapper_l.="\tvar \$table = '{$this->nettoyer($sTable_l)}';\n";
+		$sCodeModeleDatamapper_l.="\tvar \$primary_key = '{$this->nettoyer($sChampClePrimaire)}';\n";
+                    $sCodeModeleDatamapper_l.="\tvar \$created_field = 'date_creation';\n";
+    $sCodeModeleDatamapper_l.="\tvar \$updated_field = 'date_mise_a_jour';";
+
+        if(isset($has_one)&&count($has_one)>0){
+            $sCodeModeleDatamapper_l.="\tvar \$has_one = array('";
+            $sCodeModeleDatamapper_l.=implode($has_one, "', '");
+            $sCodeModeleDatamapper_l.="');\n";
+        }else{
+		    $sCodeModeleDatamapper_l.="\tvar \$has_one = array();\n";
+        }
+        $sCodeModeleDatamapper_l.="\tvar \$has_many = array();\n";
+		//--- Fin validaion des données
+		$sCodeValidationDatamapper_l.="\t\t\t);//--- Fin liste des règles\n";
+		$sCodeModeleDatamapper_l.=$sCodeValidationDatamapper_l;
+		
+        $sCodeModeleDatamapper_l.="\tfunction __construct(\$id = NULL){\n";
+        $sCodeModeleDatamapper_l.="\t\tparent::__construct(\$id);\n";
+        $sCodeModeleDatamapper_l.="\t\t\$this->load->helper('url');\n";
+        $sCodeModeleDatamapper_l.="\t\t\$this->load->database();\n";
+        $sCodeModeleDatamapper_l.="\t\t\$this->db->database = \$this->base;\n";
+        $sCodeModeleDatamapper_l.="\t\t\$this->db->db_select();\n\n";
+        $sCodeModeleDatamapper_l.="\t}\n\n";
+        $sCodeModeleDatamapper_l.="}\n";
+		
         //--- Fin validation jquery
         //--- Suppression de la dernière virgule
         $sCodeJquery_l = substr($sCodeJquery_l, 0, -3);
@@ -423,17 +566,25 @@ class GenererCode extends CI_Controller {
 
         //--- fonction initValidation
         $sCodeController_l.="\tfunction initValidation(){\n";
+		$sCodeControllerDatamapper_l.="\tfunction initValidation(){\n";
         $sCodeController_l.=$sCodeValidation_l;
+		$sCodeControllerDatamapper_l.=$sCodeValidation_l;
         $sCodeController_l.="\t}\n\n";
+		$sCodeControllerDatamapper_l.="\t}\n\n";
 
         //--- Fonction affichage
         $sCodeController_l.=$sCodeFormulaire_l;
+		$sCodeControllerDatamapper_l.=$sCodeFormulaireDatamapper_l;
 
-        //--- Fonction enregistrement
+        //--- Fonctions enregistrement
         $sCodeController_l.=$sCodeFonctionEnregistrement_l;
+		$sCodeControllerDatamapper_l.=$sCodeFonctionEnregistrementDatamapper_l;
+        //$sCodeController_l.=$sCodeFonctionEnregistrementDatamapper_l;
+		//$sCodeControllerDatamapper_l.=$sCodeFonctionEnregistrementDatamapper_l;
 
         //--- Fin crontrôleur
         $sCodeController_l.="}";
+		$sCodeControllerDatamapper_l.="}";
 
         //--- Header de la vue
         $sCodeHeaderVue_l = "<?php if (!defined('BASEPATH')) exit('No direct script access allowed'); ?>\n";
@@ -452,13 +603,15 @@ class GenererCode extends CI_Controller {
         $sCodeHeaderVue_l .= "<body>\n";
 
 
-        $this->load->view('codeGenere', array('sCodeFormulaire' => $sCodeFormulaire_l,
+        $this->load->view('codeGenereDatamapper', array('sCodeFormulaire' => $sCodeFormulaire_l,
             'sCodeVue' => $sCodeHeaderVue_l . $sCodeFormulaireVue_l,
             'sCodeModele' => $sCodeModele_l,
+			'sCodeModeleDatamapper' => $sCodeModeleDatamapper_l,
             'sCodeValidation' => $sCodeValidation_l,
             'sCodeEnregistrement' => $sCodeEnregistrement_l,
             'sCodeJquery' => $sCodeJquery_l,
-            'sCodeController' => $sCodeController_l));
+            'sCodeController' => $sCodeController_l,
+			'sCodeControllerDatamapper' => $sCodeControllerDatamapper_l));
     }
 
     function nettoyer($sValeurPostee_p) {
